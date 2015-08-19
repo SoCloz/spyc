@@ -86,7 +86,7 @@ class Spyc {
    */
   public $setting_use_syck_is_possible = false;
 
-
+    private $literalBloackStart = array('|', '|-');
 
   /**#@+
   * @access private
@@ -923,8 +923,10 @@ class Spyc {
 
   private static function startsLiteralBlock ($line) {
     $lastChar = substr (trim($line), -1);
-    if ($lastChar != '>' && $lastChar != '|') return false;
+    $bothLastChar = substr (trim($line), -2);
+    if ($lastChar != '>' && $lastChar != '|' && $bothLastChar != '|-') return false;
     if ($lastChar == '|') return $lastChar;
+    if ($bothLastChar == '|-') return $bothLastChar;
     // HTML tags should not be counted as literal blocks.
     if (preg_match ('#<.*?>$#', $line)) return false;
     return $lastChar;
@@ -941,11 +943,11 @@ class Spyc {
 
   private function addLiteralLine ($literalBlock, $line, $literalBlockStyle, $indent = -1) {
     $line = self::stripIndent($line, $indent);
-    if ($literalBlockStyle !== '|') {
+    if (!in_array($literalBlockStyle, $this->literalBloackStart)) {
         $line = self::stripIndent($line);
     }
     $line = rtrim ($line, "\r\n\t ") . "\n";
-    if ($literalBlockStyle == '|') {
+    if (in_array($literalBlockStyle, $this->literalBloackStart)) {
       return $literalBlock . $line;
     }
     if (strlen($line) == 0)
@@ -1118,12 +1120,11 @@ class Spyc {
      return $array;
   }
 
-
   private function nodeContainsGroup ($line) {
     $symbolsForReference = 'A-z0-9_\-';
     if (strpos($line, '&') === false && strpos($line, '*') === false) return false; // Please die fast ;-)
     if ($line[0] == '&' && preg_match('/^(&['.$symbolsForReference.']+)/', $line, $matches)) return $matches[1];
-    if ($line[0] == '*' && preg_match('/^(\*['.$symbolsForReference.']+)/', $line, $matches)) return $matches[1];
+    if ($line[0] == '*' && $line[1] == ' ' && preg_match('/^(\*['.$symbolsForReference.']+)/', $line, $matches)) return $matches[1];
     if (preg_match('/(&['.$symbolsForReference.']+)$/', $line, $matches)) return $matches[1];
     if (preg_match('/(\*['.$symbolsForReference.']+$)/', $line, $matches)) return $matches[1];
     if (preg_match ('#^\s*<<\s*:\s*(\*[^\s]+).*$#', $line, $matches)) return $matches[1];
